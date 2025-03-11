@@ -1,103 +1,70 @@
-import { gql } from "apollo-server";
-
-const typeDefs = gql`
-  type Query {
-    greet: String
-    users: [User]
-    user(_id: ID): User
-    quotes: [Quote]
-    iquote(by: ID): [Quote]
-  }
-  type User {
-    _id: ID
-    firstName: String
-    lastName: String
-    email: String
-    password: String
-    quotes: [Quote]
-  }
-  type Quote {
-    name: String
-    by: ID
-  }
-  type Mutation {
-    signupUser(userNew: UserInput): User
-  }
-  input UserInput {
-    firstName: String
-    lastName: String
-    email: String
-    password: String
-  }
-`;
-
-export default typeDefs;
-
------------
-
-import { quotes, users } from "../userdb.js";
-import { randomBytes } from "crypto";
-
+import {quotes,users} from './fakedb.js'
+import {randomBytes} from 'crypto'
 const resolvers = {
-  Query: {
-    greet: () => {
-      return "Welcome to GraphQL";
+    Query:{
+       users:()=>users,
+       user:(_,{id})=>users.find(user=>user.id == id),
+       quotes:()=>quotes,
+       iquote:(_,{by})=>quotes.filter(quote=>quote.by == by)
     },
-    users: () => users,
-    quotes: () => quotes,
-    user: (_, { _id }) => users.find((user) => user._id == _id),
-    iquote: (_, { by }) => quotes.filter((quote) => quote.by == by),
-  },
-  User: {
-    quotes: (ur) => quotes.filter((quote) => quote.by == ur._id),
-  },
-  Mutation: {
-    signupUser: (_,{ userNew }) => {
-      const _id = randomBytes(5).toString("hex");
-      users.push({
-        _id,
-        ...userNew
-      });
-      return users.find((user) => user._id == _id);
+    User:{
+        quotes:(ur)=>quotes.filter(quote=>quote.by == ur.id)
     },
-  },
-};
-export default resolvers;
-
-
-
---------
-
-
-
-
-export const users=[
-    {
-        _id:'101',
-        firstName:'mukesh',
-        lastName: 'mishra',
-        email:'mukesh@mail.com',
-        password:'pass123'
-    },
-    {
-        _id:'102',
-        firstName:'sam',
-        lastName: 'peter',
-        email:'sam@mail.com',
-        password:'pass1234'
+    Mutation:{
+        signupUser:(_,{userNew})=>{
+             const id = randomBytes(5).toString("hex")
+             users.push({
+                 id,
+                 ...userNew
+             })
+            return users.find(user=>user.id == id)
+        }
     }
-]
-export const quotes=[
-    {
-        name:'what a wonderful day',
-        by:'101'
-    },
-    {
-        name:'Weekadays are fantastic',
-        by:'102'
-    },
-    {
-        name:'books reading are always awesome',
-        by:'101'
-    }
-]
+}
+
+export default resolvers
+
+
+
+
+import {gql} from "apollo-server"
+const typeDefs = gql`
+ type Query{
+    users:[User]
+    user(id:ID!):User
+    quotes:[Quote]
+    iquote(by:ID!):[Quote]
+ }
+ type User{
+     id:ID!
+     firstName:String
+     lastName:String
+     email:String
+     password:String
+     quotes:[Quote]
+ }
+ type Quote{
+     name:String
+     by:ID
+ }
+
+ type Mutation{
+     signupUser(userNew:UserInput!):User
+ }
+
+ input UserInput{
+    firstName:String!
+    lastName:String!
+    email:String!
+    password:String!
+ }
+
+`
+export default typeDefs
+
+
+
+
+
+
+
