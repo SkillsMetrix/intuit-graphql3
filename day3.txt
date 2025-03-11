@@ -1,67 +1,127 @@
-import { useQuery } from "@apollo/client";
 import React from "react";
-import { GET_ALL_QUOTES } from "../gqloperations/queries";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Home() {
-  const { loading, error, data } = useQuery(GET_ALL_QUOTES);
-  if (loading) return <h1>Loading....!</h1>;
-  if (error) {
-    console.log(error.message);
-  }
+export default function NavBar() {
+  const token = localStorage.getItem("token");
+  const navigate=useNavigate()
   return (
-    <div className="container">
-      {data.quotes.map((quote) => {
-        return (
-          <blockquote>
-            <h6>{quote.name}</h6>
-            <p className="right-align">{quote.by}</p>
-          </blockquote>
-        );
-      })}
+    <nav>
+      <div className="nav-wrapper #673ab7 deep-purple">
+        <Link to="/" className="brand-logo left">
+          Quote App
+        </Link>
+        <ul id="nav-mobile" className="right">
+          {token ? (
+            <>
+              <li>
+                <Link to="/profile">Profile</Link>
+              </li>
+              <li>
+                <Link to="/create">Create</Link>
+              </li>
+              <li>
+                <button
+                  className="red btn"
+                  onClick={() => {
+                    localStorage.removeItem("token");
+                    navigate("/login");
+                  }}
+                >
+                  Logout
+                </button>
+              </li>
+            </>
+          ) : (
+            <>
+              <li>
+                <Link to="/login">Login</Link>
+              </li>
+              <li>
+                <Link to="/signup">Signup</Link>
+              </li>
+            </>
+          )}
+        </ul>
+      </div>
+    </nav>
+  );
+}
+-----
+
+import { useMutation } from "@apollo/client";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { LOGIN_USER } from "../gqloperations/mutations";
+
+export default function Login() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({});
+  const [signinUser, { error, loading, data }] = useMutation(LOGIN_USER, {
+    onCompleted(data) {
+      localStorage.setItem("token", data.user.token);
+      navigate("/");
+    },
+  });
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log(formData);
+    signinUser({
+      variables: {
+        userSignin: formData,
+      },
+    });
+  };
+  return (
+    <div className="container my-container">
+      <h5>Login!!</h5>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="email"
+          placeholder="email"
+          name="email"
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="password"
+          placeholder="password"
+          name="password"
+          onChange={handleChange}
+          required
+        />
+        <Link to="/signup">
+          <p>Dont have an account ?</p>
+        </Link>
+        <button className="btn #673ab7 deep-purple" type="submit">
+          Login
+        </button>
+      </form>
     </div>
   );
 }
 ---
 
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import {BrowserRouter} from 'react-router-dom'
-import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client'
+import { gql } from "@apollo/client";
 
-
-const client= new ApolloClient({
-  uri:'http://localhost:4000',
-  cache: new InMemoryCache()
-})
-ReactDOM.render(
-  <React.StrictMode>
-    <BrowserRouter>
-    <ApolloProvider client={client}>
-    <App />
-    </ApolloProvider>
-    
-    </BrowserRouter>
-  </React.StrictMode>,
-  document.getElementById('root')
-);
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
-----
-
-
-import { gql } from '@apollo/client'
-
-export const GET_ALL_QUOTES=gql `
-
-query getAllQuotes{
-  quotes{
-    name
-    by
+export const SIGNUP_USER = gql`
+  mutation createUser($userNew: UserInput) {
+    user: signupUser(userNew: $userNew) {
+      firstName
+    }
   }
-}`
+`;
+
+export const LOGIN_USER = gql`
+  mutation SigninUser($userSignin: UserSigninInput) {
+    user: signinUser(userSignin: $userSignin) {
+      token
+    }
+  }
+`;
