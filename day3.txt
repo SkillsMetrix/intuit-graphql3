@@ -1,52 +1,47 @@
-import { gql } from "apollo-server";
-const typeDefs = gql`
-  type Query {
-    users: [User]
-    user(_id: ID!): User
-    quotes: [Quote]
-    iquote(by: ID!): [Quote]
-  }
-  type User {
-    _id: ID!
-    firstName: String
-    lastName: String
-    email: String
-    password: String
-    quotes: [Quote]
-  }
-  type Quote {
-    name: String
-    by: ID
-  }
+import { ApolloServer } from "apollo-server";
+import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import typeDefs from "./schemaGql.js";
+import resolvers from "./resolvers.js";
+import mongoose from "mongoose";
+import { MONGO_URL, JWT_SECRET } from "./config.js";
+import jwt from "jsonwebtoken";
 
-  type Token {
-    token: String
-  }
-  type Mutation {
-    signupUser(userNew: UserInput): User
-    signinUser(userSignin: UserSigninInput): Token
-  }
+mongoose.connect(MONGO_URL, {});
+mongoose.connection.on("connected", () => {
+  console.log("MongoDB is connected...!");
+});
 
-  input UserInput {
-    firstName: String
-    lastName: String
-    email: String
-    password: String
+//import models here
+
+import "./models/User.js";
+import "./models/Quotes.js";
+
+const context = ({ req }) => {
+  const { authorization } = req.headers;
+  if (authorization) {
+    const { userId } = jwt.verify(authorization, JWT_SECRET);
+    return { userId };
   }
-  input UserSigninInput {
-    email: String
-    password: String
-  }
-`;
-export default typeDefs;
+};
 
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context,
+  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
+});
 
+server.listen().then(({ url }) => {
+  console.log(` server is ready at ${url}`);
+});
 
-------------
+---------------
 
 import { quotes, users } from "../userdb.js";
 import mongoose from "mongoose";
 import User from "./models/User.js";
+import Quote from "./models/Quotes.js";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "./config.js";
@@ -86,8 +81,16 @@ const resolvers = {
       const token = jwt.sign({ userId: user._id }, JWT_SECRET);
       return { token };
     },
+    createQuote:async (_,{name},{userId})=>{
+      if(!userId) throw new Error("you must Logged in...!")
+        const newQuote= new Quote({
+      name,
+      by:userId
+    })
+    await newQuote.save()
+    return "Quote Saved..!"
+    }
   },
 };
 
 export default resolvers;
-
