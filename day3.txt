@@ -1,23 +1,103 @@
-import { ApolloServer } from "apollo-server";
-import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-import typeDefs from "./schemaGql.js";
-import resolvers from "./resolvers.js";
-import mongoose from "mongoose";
-import { MONGO_URL } from "./config.js";
+import { gql } from "apollo-server";
 
-mongoose.connect(MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-mongoose.connection.on("connected", () => {
-  console.log("MongoDB is connected...!");
-});
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-});
+const typeDefs = gql`
+  type Query {
+    greet: String
+    users: [User]
+    user(_id: ID): User
+    quotes: [Quote]
+    iquote(by: ID): [Quote]
+  }
+  type User {
+    _id: ID
+    firstName: String
+    lastName: String
+    email: String
+    password: String
+    quotes: [Quote]
+  }
+  type Quote {
+    name: String
+    by: ID
+  }
+  type Mutation {
+    signupUser(userNew: UserInput): User
+  }
+  input UserInput {
+    firstName: String
+    lastName: String
+    email: String
+    password: String
+  }
+`;
 
-server.listen().then(({ url }) => {
-  console.log(` server is ready at ${url}`);
-});
+export default typeDefs;
+
+-----------
+
+import { quotes, users } from "../userdb.js";
+import { randomBytes } from "crypto";
+
+const resolvers = {
+  Query: {
+    greet: () => {
+      return "Welcome to GraphQL";
+    },
+    users: () => users,
+    quotes: () => quotes,
+    user: (_, { _id }) => users.find((user) => user._id == _id),
+    iquote: (_, { by }) => quotes.filter((quote) => quote.by == by),
+  },
+  User: {
+    quotes: (ur) => quotes.filter((quote) => quote.by == ur._id),
+  },
+  Mutation: {
+    signupUser: (_,{ userNew }) => {
+      const _id = randomBytes(5).toString("hex");
+      users.push({
+        _id,
+        ...userNew
+      });
+      return users.find((user) => user._id == _id);
+    },
+  },
+};
+export default resolvers;
+
+
+
+--------
+
+
+
+
+export const users=[
+    {
+        _id:'101',
+        firstName:'mukesh',
+        lastName: 'mishra',
+        email:'mukesh@mail.com',
+        password:'pass123'
+    },
+    {
+        _id:'102',
+        firstName:'sam',
+        lastName: 'peter',
+        email:'sam@mail.com',
+        password:'pass1234'
+    }
+]
+export const quotes=[
+    {
+        name:'what a wonderful day',
+        by:'101'
+    },
+    {
+        name:'Weekadays are fantastic',
+        by:'102'
+    },
+    {
+        name:'books reading are always awesome',
+        by:'101'
+    }
+]
