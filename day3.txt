@@ -11,7 +11,7 @@ const resolvers = {
         quotes:(ur)=>quotes.filter(quote=>quote.by == ur.id)
     },
     Mutation:{
-        signupUserDummy:(_,{userNew})=>{
+        signupUser:(_,{userNew})=>{
              const id = randomBytes(5).toString("hex")
              users.push({
                  id,
